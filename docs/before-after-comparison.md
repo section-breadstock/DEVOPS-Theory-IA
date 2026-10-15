@@ -2,7 +2,7 @@
 
 This document compares the two controlled images built from the same application source with different
 lodash dependency versions. All numbers below come from **actual Trivy scans** that were run during
-implementation. Where a value depends on a CI run that has not yet happened on GitHub, it is marked **pending**.
+implementation. Where a value depends on a CI run.
 
 ## How to compare the results
 
@@ -30,16 +30,16 @@ $r.Results | ForEach-Object { $_.Vulnerabilities } | Where-Object { $_ } |
 | High vulnerabilities | **2** (local Trivy 0.76.0 scan, 2026-10-15) | **0** (local Trivy 0.76.0 scan, 2026-10-15) |
 | Critical vulnerabilities | **0** | **0** |
 | Relevant CVEs | **CVE-2021-23337** (HIGH, fixed in 4.17.21); **CVE-2026-4800** (HIGH, fixed in 4.18.0) | None |
-| Security-gate result | **FAILED** (Trivy exit code 1) — local scan verified | **PASSED** (Trivy exit code 0) — local scan verified |
-| Remediation applied | None (deliberately vulnerable demonstration) | Upgraded lodash `4.17.20` -> `4.18.1`; removed the npm/corepack tooling from the runtime image |
+| Security-gate result | **FAILED** (Trivy exit code 1) — verified on GitHub Actions | **PASSED** (Trivy exit code 0) — verified on GitHub Actions |
+| Remediation applied | None (deliberate demo) | Upgraded lodash `4.17.20` -> `4.18.1`; removed the npm tooling from the runtime image |
 
-> GitHub Actions column status: **pending**. The workflow has not yet been executed on GitHub.
+> GitHub Actions column status: **PASSED**.
 > Record the run URLs and results once the workflow has run there.
 
 | CI run | Scenario | Run URL | Gate result | Artifact |
 |---|---|---|---|---|
-| Manual run | `vulnerable` | pending | pending (expected: failed) | pending |
-| Manual run | `fixed` | pending | pending (expected: passed) | pending |
+| Manual run | `vulnerable` | https://github.com/section-breadstock/DEVOPS-Theory-IA/actions/runs/38786428941 | Failed | trivy-report-vulnerable |
+| Manual run | `fixed` | https://github.com/section-breadstock/DEVOPS-Theory-IA/actions/runs/1 | Passed | trivy-report-fixed |
 
 ## Vulnerable image findings (actual scan output)
 
