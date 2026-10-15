@@ -1,0 +1,22 @@
+# Files that must never be sent to the Docker build context
+node_modules
+vulnerable/node_modules
+npm-debug.log*
+.env
+.env.*
+*.log
+
+# Source control, editor and CI metadata
+.git
+.gitignore
+.vscode
+.github
+
+# Not needed at runtime
+tests
+docs
+scripts
+reports
+*.md
+Dockerfile
+.dockerignore

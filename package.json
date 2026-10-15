@@ -1,0 +1,18 @@
+{
+  "name": "trivy-ci-gate-demo",
+  "version": "1.0.0",
+  "description": "Small Node.js HTTP service used to demonstrate a Trivy vulnerability security gate in CI.",
+  "main": "src/app.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/app.js",
+    "test": "node --test tests/app.test.js"
+  },
+  "dependencies": {
+    "lodash": "4.18.1"
+  }
+}

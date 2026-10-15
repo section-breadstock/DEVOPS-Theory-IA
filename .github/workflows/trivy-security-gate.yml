@@ -1,0 +1,121 @@
+# Trivy DevSecOps container security gate.
+#
+# Behaviour:
+#   push (main) / pull_request  -> builds and gates the FIXED image (lodash 4.18.1). Expected: PASS.
+#   workflow_dispatch           -> scenario input chooses 'fixed' (default, expected PASS)
+#                                  or 'vulnerable' (controlled demo, expected FAIL on the gate).
+name: Trivy Security Gate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Demonstration scenario to build and scan'
+        required: true
+        type: choice
+        options:
+          - fixed
+          - vulnerable
+        default: fixed
+
+permissions:
+  contents: read
+
+jobs:
+  container-security-gate:
+    name: Build and scan (${{ github.event_name == 'workflow_dispatch' && inputs.scenario || 'fixed' }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install fixed application dependencies (lockfile)
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Determine demonstration scenario
+        id: scenario
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_SCENARIO: ${{ inputs.scenario }}
+        run: |
+          # Only manual runs may select the vulnerable scenario. Push and PR runs always use fixed.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            SCENARIO="$INPUT_SCENARIO"
+          else
+            SCENARIO="fixed"
+          fi
+          case "$SCENARIO" in
+            fixed|vulnerable) ;;
+            *) echo "::error::Unsupported scenario '$SCENARIO'"; exit 1 ;;
+          esac
+          echo "scenario=$SCENARIO" >> "$GITHUB_OUTPUT"
+          echo "### Scenario: $SCENARIO" >> "$GITHUB_STEP_SUMMARY"
+          echo "Selected demonstration scenario: **$SCENARIO**"
+
+      - name: Build Docker image for selected scenario
+        env:
+          SCENARIO: ${{ steps.scenario.outputs.scenario }}
+        run: |
+          echo "Building trivy-demo:${SCENARIO} with DEMO_SCENARIO=${SCENARIO}"
+          docker build \
+            --build-arg DEMO_SCENARIO="${SCENARIO}" \
+            --tag "trivy-demo:${SCENARIO}" \
+            .
+          docker image ls "trivy-demo:${SCENARIO}"
+
+      # Step 7: generate the JSON report. exit-code 0 so the report is always produced.
+      - name: Generate Trivy JSON report (library, HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: trivy-demo:${{ steps.scenario.outputs.scenario }}
+          scanners: vuln
+          vuln-type: library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          format: json
+          output: trivy-report-${{ steps.scenario.outputs.scenario }}.json
+          exit-code: '0'
+          hide-progress: true
+
+      # Step 8: enforcement gate. exit-code 1 fails the job when qualifying findings exist.
+      - name: Security gate - fail on HIGH/CRITICAL library vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: trivy-demo:${{ steps.scenario.outputs.scenario }}
+          scanners: vuln
+          vuln-type: library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          format: table
+          exit-code: '1'
+          hide-progress: true
+
+      # Step 9: always upload the report, including when the gate fails.
+      - name: Upload Trivy JSON report artifact
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: trivy-report-${{ steps.scenario.outputs.scenario }}
+          path: trivy-report-${{ steps.scenario.outputs.scenario }}.json
+          if-no-files-found: warn
+          retention-days: 14
