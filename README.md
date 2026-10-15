@@ -14,7 +14,8 @@ This README separates what has been **verified** from what is **expected**.
 | Trivy scan of vulnerable image: CVE-2021-23337 and CVE-2026-4800 (HIGH, lodash 4.17.20); gate exit 1 | **Verified locally** (Trivy 0.76.0 container) |
 | Trivy scan of fixed image: no HIGH/CRITICAL library findings; gate exit 0 | **Verified locally** (Trivy 0.76.0 container) |
 | `scripts/demo.ps1` end to end | **Verified locally** (with a Trivy shim on PATH; see section 16) |
-| GitHub Actions workflow run (vulnerable and fixed) | **Not yet verified.** The project has not been pushed to GitHub. |
+| GitHub Actions workflow run, fixed (push-triggered, Run #1) | **Verified on GitHub Actions**: Status Success, gate exit 0 |
+| GitHub Actions workflow run, vulnerable (manual run) | **Verified on GitHub Actions**: Status Failure, gate exit 1, CVE-2021-23337 and CVE-2026-4800 reported |
 
 ## 1. Aim
 
@@ -313,8 +314,8 @@ Pushes to `main` and pull requests always build the `fixed` scenario and are exp
 |---|---|---|---|---|
 | Local, `vulnerable` | 2 HIGH: CVE-2021-23337, CVE-2026-4800 (lodash) | exit 1 | Fails as designed | **Yes** (local Trivy 0.76.0) |
 | Local, `fixed` | 0 | exit 0 | Passes | **Yes** (local Trivy 0.76.0) |
-| GitHub, `vulnerable` (manual) | Expected: the same 2 | Expected to fail | Expected failed | **Pending** (not run on GitHub) |
-| GitHub, `fixed` (manual or push) | Expected: 0 | Expected to pass | Expected success | **Pending** (not run on GitHub) |
+| GitHub, `vulnerable` (manual) | 2 HIGH: CVE-2021-23337, CVE-2026-4800 (lodash) | exit 1 | Failed | **Verified on GitHub Actions** |
+| GitHub, `fixed` (push, Run #1) | 0 | exit 0 | Passed | **Verified on GitHub Actions** |
 
 ## 20. Downloading and interpreting the scan report
 
@@ -356,7 +357,7 @@ See [docs/before-after-comparison.md](docs/before-after-comparison.md). Verified
 | CRITICAL findings | 0 | 0 |
 | Gate result | Failed (exit 1) | Passed (exit 0) |
 
-GitHub Actions results are pending until the workflow has run on GitHub.
+GitHub Actions results are verified: the fixed push run passed and the vulnerable manual run failed as expected. See `docs/before-after-comparison.md` for run links.
 
 ## 22. Security benefits and practical use cases
 
@@ -368,7 +369,7 @@ GitHub Actions results are pending until the workflow has run on GitHub.
 
 ## 23. Limitations and possible improvements
 
-- **CI not yet executed:** the GitHub Actions workflow has not run on GitHub. Its results are pending.
+- **CI executed:** the GitHub Actions workflow ran on GitHub for both the fixed (push) and vulnerable (manual) scenarios with the expected outcomes.
 - **Database dependency:** findings depend on the Trivy vulnerability database at scan time, so a later scan may differ.
 - **Library scope:** only `--vuln-type library` is gated. OS package findings are not gated, by design.
 - **Unfixed vulnerabilities:** `ignore-unfixed` is not set, so a HIGH finding with no fix also fails the gate. Teams may prefer to ignore those.
